@@ -1,5 +1,5 @@
-package si.um.feri.maprri.raster.utils;
-
+package si.um.feri.maprri.lendloop.utils;
+// this is a test class
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;

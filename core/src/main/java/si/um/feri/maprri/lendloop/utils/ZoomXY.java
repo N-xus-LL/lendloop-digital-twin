@@ -1,4 +1,4 @@
-package si.um.feri.maprri.raster.utils;
+package si.um.feri.maprri.lendloop.utils;
 
 public class ZoomXY {
     public int zoom;

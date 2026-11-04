@@ -3,22 +3,22 @@ package si.um.feri.maprri.lwjgl3;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 
-import si.um.feri.maprri.raster.RasterMap;
+import si.um.feri.maprri.lendloop.LendLoopGame;
 
 /** Launches the desktop (LWJGL3) application. */
-public class Lwjgl3LauncherRasterMap {
+public class Lwjgl3Launcher {
     public static void main(String[] args) {
         if (StartupHelper.startNewJvmIfRequired()) return; // This handles macOS support and helps on Windows.
         createApplication();
     }
 
     private static Lwjgl3Application createApplication() {
-        return new Lwjgl3Application(new RasterMap(), getDefaultConfiguration());
+        return new Lwjgl3Application(new LendLoopGame(), getDefaultConfiguration());
     }
 
     private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
         Lwjgl3ApplicationConfiguration configuration = new Lwjgl3ApplicationConfiguration();
-        configuration.setTitle("MapRRI");
+        configuration.setTitle("LendLoop");
         //// Vsync limits the frames per second to what your hardware can display, and helps eliminate
         //// screen tearing. This setting doesn't always work on Linux, so the line after is a safeguard.
         configuration.useVsync(true);

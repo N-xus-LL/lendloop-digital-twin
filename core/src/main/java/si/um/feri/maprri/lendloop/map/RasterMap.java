@@ -1,4 +1,4 @@
-package si.um.feri.maprri.raster;
+package si.um.feri.maprri.lendloop.map;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
@@ -22,10 +22,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 
 import java.io.IOException;
 
-import si.um.feri.maprri.raster.utils.Constants;
-import si.um.feri.maprri.raster.utils.Geolocation;
-import si.um.feri.maprri.raster.utils.MapRasterTiles;
-import si.um.feri.maprri.raster.utils.ZoomXY;
+import si.um.feri.maprri.lendloop.utils.*;
 
 public class RasterMap extends ApplicationAdapter implements GestureDetector.GestureListener {
 

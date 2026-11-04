@@ -1,4 +1,4 @@
-package si.um.feri.maprri.raster.utils;
+package si.um.feri.maprri.lendloop.utils;
 
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
@@ -15,8 +15,6 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-import si.um.feri.maprri.raster.utils.ZoomXY;
-
 public class MapRasterTiles {
     //Mapbox
     //https://docs.mapbox.com/api/maps/raster-tiles/
@@ -28,7 +26,7 @@ public class MapRasterTiles {
     //Geoapify
     //https://www.geoapify.com/get-started-with-maps-api
     static String mapServiceUrl = "https://maps.geoapify.com/v1/tile/";
-    static String token = "?&apiKey=" + si.um.feri.maprri.raster.utils.Keys.GEOAPIFY;
+    static String token = "?&apiKey=" + si.um.feri.maprri.lendloop.utils.Keys.GEOAPIFY;
     static String tilesetId = "klokantech-basic";
     static String format = "@2x.png";
 
@@ -45,6 +43,9 @@ public class MapRasterTiles {
      * @throws IOException
      */
     public static Texture getRasterTile(int zoom, int x, int y) throws IOException {
+        if (Keys.GEOAPIFY == null || Keys.GEOAPIFY.isBlank()) {
+            throw new IllegalStateException("GEOAPIFY_API_KEY is missing");
+        }
         URL url = new URL(mapServiceUrl + tilesetId + "/" + zoom + "/" + x + "/" + y + format + token);
         ByteArrayOutputStream bis = fetchTile(url);
         return getTexture(bis.toByteArray());
@@ -84,7 +85,7 @@ public class MapRasterTiles {
      * @return
      * @throws IOException
      */
-    public static Texture[] getRasterTileZone(si.um.feri.maprri.raster.utils.ZoomXY zoomXY, int size) throws IOException {
+    public static Texture[] getRasterTileZone(si.um.feri.maprri.lendloop.utils.ZoomXY zoomXY, int size) throws IOException {
         Texture[] array = new Texture[size * size];
         int[] factorY = new int[size * size]; //if size is 3 {-1, -1, -1, 0, 0, 0, 1, 1, 1};
         int[] factorX = new int[size * size]; //if size is 3 {-1, 0, 1, -1, 0, 1, -1, 0, 1};
@@ -144,7 +145,7 @@ public class MapRasterTiles {
      * @param zoom
      * @return
      */
-    public static si.um.feri.maprri.raster.utils.ZoomXY getTileNumber(final double lat, final double lon, final int zoom) {
+    public static si.um.feri.maprri.lendloop.utils.ZoomXY getTileNumber(final double lat, final double lon, final int zoom) {
         int xtile = (int) Math.floor((lon + 180) / 360 * (1 << zoom));
         int ytile = (int) Math.floor((1 - Math.log(Math.tan(Math.toRadians(lat)) + 1 / Math.cos(Math.toRadians(lat))) / Math.PI) / 2 * (1 << zoom));
         if (xtile < 0)
@@ -155,7 +156,7 @@ public class MapRasterTiles {
             ytile = 0;
         if (ytile >= (1 << zoom))
             ytile = ((1 << zoom) - 1);
-        return new si.um.feri.maprri.raster.utils.ZoomXY(zoom, xtile, ytile);
+        return new si.um.feri.maprri.lendloop.utils.ZoomXY(zoom, xtile, ytile);
     }
 
     //https://www.maptiler.com/google-maps-coordinates-tile-bounds-projection/#15/15.63/46.56
@@ -210,16 +211,16 @@ public class MapRasterTiles {
     public static Vector2 getPixelPosition(double lat, double lng, int beginTileX, int beginTileY) {
         double[] worldCoordinate = project(lat, lng, MapRasterTiles.TILE_SIZE);
         // Scale to fit our image
-        double scale = Math.pow(2, si.um.feri.maprri.raster.utils.Constants.ZOOM);
+        double scale = Math.pow(2, si.um.feri.maprri.lendloop.utils.Constants.ZOOM);
 
         // Apply scale to world coordinates to get image coordinates
         return new Vector2(
                 (int) (Math.floor(worldCoordinate[0] * scale) - (beginTileX * MapRasterTiles.TILE_SIZE)),
-                si.um.feri.maprri.raster.utils.Constants.MAP_HEIGHT - (int) (Math.floor(worldCoordinate[1] * scale) - (beginTileY * MapRasterTiles.TILE_SIZE) - 1)
+                si.um.feri.maprri.lendloop.utils.Constants.MAP_HEIGHT - (int) (Math.floor(worldCoordinate[1] * scale) - (beginTileY * MapRasterTiles.TILE_SIZE) - 1)
         );
     }
 
-    public static si.um.feri.maprri.raster.utils.Geolocation[][] fetchPath(si.um.feri.maprri.raster.utils.Geolocation[] geolocations){
+    public static si.um.feri.maprri.lendloop.utils.Geolocation[][] fetchPath(si.um.feri.maprri.lendloop.utils.Geolocation[] geolocations){
         // Example coordinates (longitude, latitude)
         double[][] coordinatesArray = {
                 {-122.42, 37.78}, // San Francisco
@@ -241,7 +242,7 @@ public class MapRasterTiles {
         return null;
     }
 
-    public static si.um.feri.maprri.raster.utils.Geolocation[][] getRouteFromCoordinates(double[][] coordinates) throws Exception {
+    public static si.um.feri.maprri.lendloop.utils.Geolocation[][] getRouteFromCoordinates(double[][] coordinates) throws Exception {
         // Build the coordinates string for the URL
         StringBuilder coordinatesPath = new StringBuilder();
         for (int i = 0; i < coordinates.length; i++) {
@@ -251,7 +252,7 @@ public class MapRasterTiles {
 
         // Construct the URL
         String urlString = "https://api.geoapify.com/v1/routing?waypoints=" + coordinatesPath.toString() +
-                "&mode=" + "drive" + "&apiKey=" + si.um.feri.maprri.raster.utils.Keys.GEOAPIFY;
+                "&mode=" + "drive" + "&apiKey=" + si.um.feri.maprri.lendloop.utils.Keys.GEOAPIFY;
 
         // Open connection
         URL url = new URL(urlString);
@@ -273,7 +274,7 @@ public class MapRasterTiles {
         }
         in.close();
 
-        si.um.feri.maprri.raster.utils.Geolocation[][] geolocations;
+        si.um.feri.maprri.lendloop.utils.Geolocation[][] geolocations;
 
         // Parse the JSON response
         JSONObject jsonResponse = new JSONObject(response.toString());
@@ -282,18 +283,18 @@ public class MapRasterTiles {
             JSONObject geometry = features.getJSONObject(0).getJSONObject("geometry");
             JSONArray coordinatesArray = geometry.getJSONArray("coordinates");
 
-            geolocations = new si.um.feri.maprri.raster.utils.Geolocation[coordinatesArray.length()][];
+            geolocations = new si.um.feri.maprri.lendloop.utils.Geolocation[coordinatesArray.length()][];
             // Print each coordinate in the path
             for (int i = 0; i < coordinatesArray.length(); i++) {
                 JSONArray coord = coordinatesArray.getJSONArray(i);
 
-                si.um.feri.maprri.raster.utils.Geolocation[] geol = new si.um.feri.maprri.raster.utils.Geolocation[coord.length()];
+                si.um.feri.maprri.lendloop.utils.Geolocation[] geol = new si.um.feri.maprri.lendloop.utils.Geolocation[coord.length()];
                 for (int j = 0; j < coord.length(); j++) {
                     JSONArray c = coord.getJSONArray(j);
                     double lon = c.getDouble(0);
                     double lat = c.getDouble(1);
                     System.out.println("Longitude: " + lon + ", Latitude: " + lat);
-                    geol[j] = new si.um.feri.maprri.raster.utils.Geolocation(lat, lon);
+                    geol[j] = new si.um.feri.maprri.lendloop.utils.Geolocation(lat, lon);
                 }
                 geolocations[i] = geol;
             }

@@ -51,6 +51,26 @@ run {
   //setIgnoreExitValue(true)
 
   if (os.contains('mac')) jvmArgs += "-XstartOnFirstThread"
+  def envFile = rootProject.file(".env")
+
+  if (envFile.exists()) {
+    def properties = new Properties()
+
+    envFile.eachLine { line ->
+      line = line.trim()
+
+      if (line && !line.startsWith("#")) {
+        def parts = line.split("=", 2)
+
+        if (parts.length == 2) {
+          properties.setProperty(parts[0].trim(), parts[1].trim())
+        }
+      }
+    }
+
+    environment "GEOAPIFY_API_KEY",
+      properties.getProperty("GEOAPIFY_API_KEY", "")
+  }
 }
 
 jar {

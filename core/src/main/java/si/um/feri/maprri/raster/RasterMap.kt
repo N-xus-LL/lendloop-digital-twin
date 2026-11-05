@@ -1,199 +1,166 @@
-package si.um.feri.maprri.raster;
+package si.um.feri.maprri.raster
 
-import com.badlogic.gdx.ApplicationAdapter;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.input.GestureDetector;
-import com.badlogic.gdx.maps.MapLayers;
-import com.badlogic.gdx.maps.tiled.TiledMap;
-import com.badlogic.gdx.maps.tiled.TiledMapRenderer;
-import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
-import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
-import com.badlogic.gdx.maps.tiled.tiles.StaticTiledMapTile;
-import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.ApplicationAdapter
+import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.Input
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.OrthographicCamera
+import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g2d.TextureRegion
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.input.GestureDetector
+import com.badlogic.gdx.maps.tiled.TiledMap
+import com.badlogic.gdx.maps.tiled.TiledMapRenderer
+import com.badlogic.gdx.maps.tiled.TiledMapTileLayer
+import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer
+import com.badlogic.gdx.maps.tiled.tiles.StaticTiledMapTile
+import com.badlogic.gdx.math.MathUtils
+import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.utils.ScreenUtils
+import si.um.feri.maprri.raster.objects.Constants
+import si.um.feri.maprri.raster.dataclasses.Geolocation
+import si.um.feri.maprri.raster.objects.MapRasterTiles
+import si.um.feri.maprri.raster.dataclasses.ZoomXY
 
-import java.io.IOException;
+class RasterMap : ApplicationAdapter(), GestureDetector.GestureListener {
+    private lateinit var shapeRenderer: ShapeRenderer
+    private lateinit var touchPosition: Vector3
+    private lateinit var tiledMap: TiledMap
+    private lateinit var tiledMapRenderer: TiledMapRenderer
+    private lateinit var camera: OrthographicCamera
+    private lateinit var mapTiles: List<Texture>
+    private lateinit var beginTile: ZoomXY
+    private val centerGeolocation = Geolocation(46.557314, 15.637771)
+    private val markerGeolocation = Geolocation(46.559070, 15.638100)
+    private val markerPosition = Vector2()  // Reused across frames to avoid per-frame allocation in drawMarkers().
 
-import si.um.feri.maprri.raster.utils.Constants;
-import si.um.feri.maprri.raster.utils.Geolocation;
-import si.um.feri.maprri.raster.utils.MapRasterTiles;
-import si.um.feri.maprri.raster.utils.ZoomXY;
+    override fun create() {
+        shapeRenderer = ShapeRenderer()
 
-public class RasterMap extends ApplicationAdapter implements GestureDetector.GestureListener {
+        camera = OrthographicCamera().apply {
+            setToOrtho(false, Constants.MAP_WIDTH.toFloat(), Constants.MAP_HEIGHT.toFloat())
+            position.set(Constants.MAP_WIDTH / 2f, Constants.MAP_HEIGHT / 2f, 0f)
+            viewportWidth = Constants.MAP_WIDTH / 2f
+            viewportHeight = Constants.MAP_HEIGHT / 2f
+            zoom = 2f
+            update()
+        }
 
-    private ShapeRenderer shapeRenderer;
-    private Vector3 touchPosition;
-
-    private TiledMap tiledMap;
-    private TiledMapRenderer tiledMapRenderer;
-    private OrthographicCamera camera;
-
-    private Texture[] mapTiles;
-    private ZoomXY beginTile;   // top left tile
-
-    // center geolocation
-    private final Geolocation CENTER_GEOLOCATION = new Geolocation(46.557314, 15.637771);
-
-    // test marker
-    private final Geolocation MARKER_GEOLOCATION = new Geolocation(46.559070, 15.638100);
-
-    @Override
-    public void create() {
-        shapeRenderer = new ShapeRenderer();
-
-        camera = new OrthographicCamera();
-        camera.setToOrtho(false, Constants.MAP_WIDTH, Constants.MAP_HEIGHT);
-        camera.position.set(Constants.MAP_WIDTH / 2f, Constants.MAP_HEIGHT / 2f, 0);
-        camera.viewportWidth = Constants.MAP_WIDTH / 2f;
-        camera.viewportHeight = Constants.MAP_HEIGHT / 2f;
-        camera.zoom = 2f;
-        camera.update();
-
-        touchPosition = new Vector3();
+        touchPosition = Vector3()
 
         try {
-            //in most cases, geolocation won't be in the center of the tile because tile borders are predetermined (geolocation can be at the corner of a tile)
-            ZoomXY centerTile = MapRasterTiles.getTileNumber(CENTER_GEOLOCATION.lat, CENTER_GEOLOCATION.lng, Constants.ZOOM);
-            mapTiles = MapRasterTiles.getRasterTileZone(centerTile, Constants.NUM_TILES);
-            //you need the beginning tile (tile on the top left corner) to convert geolocation to a location in pixels.
-            beginTile = new ZoomXY(Constants.ZOOM, centerTile.x - ((Constants.NUM_TILES - 1) / 2), centerTile.y - ((Constants.NUM_TILES - 1) / 2));
-        } catch (IOException e) {
-            e.printStackTrace();
+            val centerTile = MapRasterTiles.getTileNumber(
+                centerGeolocation.lat, centerGeolocation.lng, Constants.ZOOM
+            )
+            mapTiles = MapRasterTiles.getRasterTileZone(centerTile, Constants.NUM_TILES)
+            beginTile = ZoomXY(
+                Constants.ZOOM,
+                centerTile.x - (Constants.NUM_TILES - 1) / 2,
+                centerTile.y - (Constants.NUM_TILES - 1) / 2
+            )
+        } catch (e: Exception) {
+            // Java version swallowed the exception and left mapTiles/beginTile null, which then crashed in render().
+            // Fail fast instead — same visual outcome (no render) but with a clear stack trace.
+            throw RuntimeException("[EXCEPTION] Failed to load initial tile zone.", e)
         }
 
-        tiledMap = new TiledMap();
-        MapLayers layers = tiledMap.getLayers();
+        tiledMap = TiledMap()
+        val layer = TiledMapTileLayer(
+            Constants.NUM_TILES, Constants.NUM_TILES,
+            MapRasterTiles.TILE_SIZE, MapRasterTiles.TILE_SIZE
+        )
 
-        TiledMapTileLayer layer = new TiledMapTileLayer(Constants.NUM_TILES, Constants.NUM_TILES, MapRasterTiles.TILE_SIZE, MapRasterTiles.TILE_SIZE);
-        int index = 0;
-        for (int j = Constants.NUM_TILES - 1; j >= 0; j--) {
-            for (int i = 0; i < Constants.NUM_TILES; i++) {
-                TiledMapTileLayer.Cell cell = new TiledMapTileLayer.Cell();
-                cell.setTile(new StaticTiledMapTile(new TextureRegion(mapTiles[index], MapRasterTiles.TILE_SIZE, MapRasterTiles.TILE_SIZE)));
-                layer.setCell(i, j, cell);
-                index++;
+        var index = 0
+        for (j in Constants.NUM_TILES - 1 downTo 0) {
+            for (i in 0 until Constants.NUM_TILES) {
+                val cell = TiledMapTileLayer.Cell().apply {
+                    tile = StaticTiledMapTile(
+                        TextureRegion(mapTiles[index], MapRasterTiles.TILE_SIZE, MapRasterTiles.TILE_SIZE)
+                    )
+                }
+                layer.setCell(i, j, cell)
+                index++
             }
         }
-        layers.add(layer);
+        tiledMap.layers.add(layer)
 
-        tiledMapRenderer = new OrthogonalTiledMapRenderer(tiledMap);
+        tiledMapRenderer = OrthogonalTiledMapRenderer(tiledMap)
     }
 
-    @Override
-    public void render() {
-        ScreenUtils.clear(0, 0, 0, 1);
-
-        handleInput();
-
-        camera.update();
-
-        tiledMapRenderer.setView(camera);
-        tiledMapRenderer.render();
-
-        drawMarkers();
+    override fun render() {
+        ScreenUtils.clear(0f, 0f, 0f, 1f)
+        handleInput()
+        camera.update()
+        tiledMapRenderer.setView(camera)
+        tiledMapRenderer.render()
+        drawMarkers()
     }
 
-    private void drawMarkers() {
-        Vector2 marker = MapRasterTiles.getPixelPosition(MARKER_GEOLOCATION.lat, MARKER_GEOLOCATION.lng, beginTile.x, beginTile.y);
+    private fun drawMarkers() {
+        MapRasterTiles.getPixelPosition(
+            markerGeolocation.lat, markerGeolocation.lng,
+            beginTile.x, beginTile.y
+        ).also { markerPosition.set(it) }
 
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        shapeRenderer.setColor(Color.RED);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.circle(marker.x, marker.y, 10);
-        shapeRenderer.end();
+        shapeRenderer.projectionMatrix = camera.combined
+        shapeRenderer.color = Color.RED
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.circle(markerPosition.x, markerPosition.y, 10f)
+        shapeRenderer.end()
     }
 
-    @Override
-    public void dispose() {
-        shapeRenderer.dispose();
+    override fun dispose() { shapeRenderer.dispose() }
+
+    // GestureListener
+    override fun touchDown(x: Float, y: Float, pointer: Int, button: Int): Boolean {
+        touchPosition.set(x, y, 0f)
+        camera.unproject(touchPosition)
+        return false
     }
-
-    @Override
-    public boolean touchDown(float x, float y, int pointer, int button) {
-        touchPosition.set(x, y, 0);
-        camera.unproject(touchPosition);
-        return false;
+    override fun tap(x: Float, y: Float, count: Int, button: Int): Boolean = false
+    override fun longPress(x: Float, y: Float): Boolean = false
+    override fun fling(velocityX: Float, velocityY: Float, button: Int): Boolean = false
+    override fun pan(x: Float, y: Float, deltaX: Float, deltaY: Float): Boolean {
+        camera.translate(-deltaX, deltaY)
+        return false
     }
-
-    @Override
-    public boolean tap(float x, float y, int count, int button) {
-        return false;
+    override fun panStop(x: Float, y: Float, pointer: Int, button: Int): Boolean = false
+    override fun zoom(initialDistance: Float, distance: Float): Boolean {
+        if (initialDistance >= distance) camera.zoom += 0.02f
+        else camera.zoom -= 0.02f
+        return false
     }
+    override fun pinch(
+        initialPointer1: Vector2, initialPointer2: Vector2,
+        pointer1: Vector2, pointer2: Vector2
+    ): Boolean = false
+    override fun pinchStop() { /* ... */ }
 
-    @Override
-    public boolean longPress(float x, float y) {
-        return false;
-    }
-
-    @Override
-    public boolean fling(float velocityX, float velocityY, int button) {
-        return false;
-    }
-
-    @Override
-    public boolean pan(float x, float y, float deltaX, float deltaY) {
-        camera.translate(-deltaX, deltaY);
-        return false;
-    }
-
-    @Override
-    public boolean panStop(float x, float y, int pointer, int button) {
-        return false;
-    }
-
-    @Override
-    public boolean zoom(float initialDistance, float distance) {
-        if (initialDistance >= distance)
-            camera.zoom += 0.02;
-        else
-            camera.zoom -= 0.02;
-        return false;
-    }
-
-    @Override
-    public boolean pinch(Vector2 initialPointer1, Vector2 initialPointer2, Vector2 pointer1, Vector2 pointer2) {
-        return false;
-    }
-
-    @Override
-    public void pinchStop() {
-
-    }
-
-    private void handleInput() {
-        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
-            camera.zoom += 0.02;
-        }
-        if (Gdx.input.isKeyPressed(Input.Keys.Q)) {
-            camera.zoom -= 0.02;
-        }
-        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-            camera.translate(-3, 0, 0);
-        }
-        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-            camera.translate(3, 0, 0);
-        }
-        if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-            camera.translate(0, -3, 0);
-        }
-        if (Gdx.input.isKeyPressed(Input.Keys.UP)) {
-            camera.translate(0, 3, 0);
+    // Input
+    private fun handleInput() {
+        with(Gdx.input) {
+            if (isKeyPressed(Input.Keys.PLUS))  camera.zoom += 0.02f
+            if (isKeyPressed(Input.Keys.MINUS)) camera.zoom -= 0.02f
+            if (isKeyPressed(Input.Keys.LEFT))  camera.translate(-3f,  0f, 0f)
+            if (isKeyPressed(Input.Keys.RIGHT)) camera.translate( 3f,  0f, 0f)
+            if (isKeyPressed(Input.Keys.DOWN))  camera.translate( 0f, -3f, 0f)
+            if (isKeyPressed(Input.Keys.UP))    camera.translate( 0f,  3f, 0f)
         }
 
-        camera.zoom = MathUtils.clamp(camera.zoom, 0.5f, 2f);
+        camera.zoom = MathUtils.clamp(camera.zoom, 0.5f, 2f)
+        val effectiveViewportWidth = camera.viewportWidth * camera.zoom
+        val effectiveViewportHeight = camera.viewportHeight * camera.zoom
 
-        float effectiveViewportWidth = camera.viewportWidth * camera.zoom;
-        float effectiveViewportHeight = camera.viewportHeight * camera.zoom;
-
-        camera.position.x = MathUtils.clamp(camera.position.x, effectiveViewportWidth / 2f, Constants.MAP_WIDTH - effectiveViewportWidth / 2f);
-        camera.position.y = MathUtils.clamp(camera.position.y, effectiveViewportHeight / 2f, Constants.MAP_HEIGHT - effectiveViewportHeight / 2f);
+        camera.position.x = MathUtils.clamp(
+            camera.position.x,
+            effectiveViewportWidth / 2f,
+            Constants.MAP_WIDTH - effectiveViewportWidth / 2f
+        )
+        camera.position.y = MathUtils.clamp(
+            camera.position.y,
+            effectiveViewportHeight / 2f,
+            Constants.MAP_HEIGHT - effectiveViewportHeight / 2f
+        )
     }
 }

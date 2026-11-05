@@ -1,14 +1,12 @@
-package si.um.feri.maprri.raster.utils;
+package si.um.feri.maprri.raster.objects
 
-import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Gdx
 
-import si.um.feri.maprri.raster.utils.MapRasterTiles;
-
-public class Constants {
-    public static final int NUM_TILES = 3;
-    public static final int ZOOM = 15;
-    public static final int MAP_WIDTH = MapRasterTiles.TILE_SIZE * NUM_TILES;
-    public static final int MAP_HEIGHT = si.um.feri.maprri.raster.utils.MapRasterTiles.TILE_SIZE * NUM_TILES;
-    public static final int HUD_WIDTH = Gdx.graphics.getWidth();
-    public static final int HUD_HEIGHT = Gdx.graphics.getHeight();
+object Constants {
+    const val NUM_TILES: Int = 3
+    const val ZOOM: Int = 15
+    const val MAP_WIDTH: Int  = MapRasterTiles.TILE_SIZE * NUM_TILES
+    const val MAP_HEIGHT: Int = MapRasterTiles.TILE_SIZE * NUM_TILES
+    val HUD_WIDTH: Int  = Gdx.graphics.width
+    val HUD_HEIGHT: Int = Gdx.graphics.height
 }

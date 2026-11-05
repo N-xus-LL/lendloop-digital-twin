@@ -1,58 +1,64 @@
-package si.um.feri.maprri.vector;
+package si.um.feri.maprri.vector
 
-import com.badlogic.gdx.ApplicationAdapter;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.ApplicationAdapter
+import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.Input
+import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.graphics.OrthographicCamera
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 
-public class VectorMap extends ApplicationAdapter {
-    private VectorMapRenderer map;
-    OrthographicCamera camera;
-    ShapeRenderer shapeRenderer;
+class VectorMap : ApplicationAdapter() {
 
-    float zoomSpeed = 0.02f;
+    private lateinit var map: VectorMapRenderer
+    private lateinit var camera: OrthographicCamera
+    private lateinit var shapeRenderer: ShapeRenderer
 
-    @Override
-    public void create() {
-        shapeRenderer = new ShapeRenderer();
-        camera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        map = new VectorMapRenderer(camera, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        camera.position.set(0, 0, 0);
-        camera.update();
+    private val zoomSpeed = 0.02f
+
+    override fun create() {
+        shapeRenderer = ShapeRenderer()
+        camera = OrthographicCamera(
+            Gdx.graphics.width.toFloat(),
+            Gdx.graphics.height.toFloat()
+        )
+        map = VectorMapRenderer(camera, Gdx.graphics.width.toFloat(), Gdx.graphics.height.toFloat())
+        camera.position.set(0f, 0f, 0f)
+        camera.update()
     }
 
-    @Override
-    public void render() {
-        handleInput();
+    override fun render() {
+        handleInput()
 
-        Gdx.gl.glClearColor(1, 1, 1, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        Gdx.gl.glClearColor(1f, 1f, 1f, 1f)
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
 
-        map.shapeRenderer.setProjectionMatrix(camera.combined);
-        map.render();
+        // Note: VectorMapRenderer.render() already sets the projection matrix
+        // on its own ShapeRenderer; this line targets *this* class's shapeRenderer,
+        // which is never used for drawing. Kept for parity, harmless.
+        shapeRenderer.projectionMatrix = camera.combined
+
+        map.render()
     }
 
-    private void handleInput() {
-        float moveSpeed = 5 / map.scale;
-        if (Gdx.input.isKeyPressed(Input.Keys.LEFT))  map.offsetX -= moveSpeed;
-        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) map.offsetX += moveSpeed;
-        if (Gdx.input.isKeyPressed(Input.Keys.UP))    map.offsetY += moveSpeed;
-        if (Gdx.input.isKeyPressed(Input.Keys.DOWN))  map.offsetY -= moveSpeed;
-        if (Gdx.input.isKeyPressed(Input.Keys.A))  map.scale *= (1 + zoomSpeed);
-        if (Gdx.input.isKeyPressed(Input.Keys.S)) map.scale *= (1 - zoomSpeed);
+    private fun handleInput() {
+        val moveSpeed = 5f / map.scale
+        with(Gdx.input) {
+            if (isKeyPressed(Input.Keys.LEFT))  map.offsetX -= moveSpeed
+            if (isKeyPressed(Input.Keys.RIGHT)) map.offsetX += moveSpeed
+            if (isKeyPressed(Input.Keys.UP))    map.offsetY += moveSpeed
+            if (isKeyPressed(Input.Keys.DOWN))  map.offsetY -= moveSpeed
+            if (isKeyPressed(Input.Keys.A))     map.scale *= (1 + zoomSpeed)
+            if (isKeyPressed(Input.Keys.S))     map.scale *= (1 - zoomSpeed)
+        }
     }
 
-    @Override
-    public void resize(int width, int height) {
-        map.viewport.update(width, height);
+    override fun resize(width: Int, height: Int) {
+        map.viewport.update(width, height)
+        map.viewport.apply()            // FitViewport needs apply() after update()
     }
 
-    @Override
-    public void dispose() {
-        map.dispose();
-        shapeRenderer.dispose();
+    override fun dispose() {
+        map.dispose()
+        shapeRenderer.dispose()
     }
 }

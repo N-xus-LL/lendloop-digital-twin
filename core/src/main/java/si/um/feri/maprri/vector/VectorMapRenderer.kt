@@ -1,158 +1,145 @@
-package si.um.feri.maprri.vector;
+package si.um.feri.maprri.vector
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.utils.viewport.FitViewport;
-import com.badlogic.gdx.utils.viewport.Viewport;
+import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.OrthographicCamera
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.utils.viewport.FitViewport
+import com.badlogic.gdx.utils.viewport.Viewport
+import kotlin.math.PI
+import kotlin.math.ln
+import kotlin.math.tan
+import org.json.JSONArray
+import org.json.JSONObject
 
-import org.json.JSONArray;
-import org.json.JSONObject;
+class VectorMapRenderer(
+    var camera: OrthographicCamera,
+    screenWidth: Float,
+    screenHeight: Float
+) {
 
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
+    private var minX = Float.MAX_VALUE
+    private var maxX = -Float.MAX_VALUE
+    private var minY = Float.MAX_VALUE
+    private var maxY = -Float.MAX_VALUE
 
-public class VectorMapRenderer {
-    private float minX = Float.MAX_VALUE, maxX = -Float.MAX_VALUE;
-    private float minY = Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
+    val shapeRenderer: ShapeRenderer = ShapeRenderer()
+    private val roads = mutableListOf<FloatArray>()
+    private val buildings = mutableListOf<FloatArray>()
 
-    public final ShapeRenderer shapeRenderer;
-    private final List<float[]> roads = new ArrayList<>();
-    private final List<float[]> buildings = new ArrayList<>();
+    val viewport: Viewport = FitViewport(screenWidth, screenHeight, camera).apply { apply() }
 
-    public OrthographicCamera camera;
-    public Viewport viewport;
+    var scale: Float = 0.5f
+    var offsetX: Float = 0f
+    var offsetY: Float = 0f
 
-    // Camera offset & scale for zoom/pan
-    public float scale = 0.5f;
-    public float offsetX = 0f, offsetY = 0f;
-
-    public VectorMapRenderer(OrthographicCamera camera, float screenWidth, float screenHeight) {
-        shapeRenderer = new ShapeRenderer();
-        // Setup camera + viewport
-        this.camera = camera;
-        viewport = new FitViewport(screenWidth, screenHeight, camera);
-        viewport.apply();
-
-        loadGeoJSON("maribor_center.geojson");
+    init {
+        loadGeoJSON("maribor_center.geojson")
     }
 
-    private void loadGeoJSON(String filename) {
+    private fun loadGeoJSON(filename: String) {
         try {
-            InputStream is = Gdx.files.internal(filename).read();
-            String text = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+            val text = Gdx.files.internal(filename).readString("UTF-8")
 
-            JSONObject geojson = new JSONObject(text);
-            JSONArray features = geojson.getJSONArray("features");
+            val geojson = JSONObject(text)
+            val features = geojson.getJSONArray("features")
 
-            for (int i = 0; i < features.length(); i++) {
-                JSONObject feature = features.getJSONObject(i);
-                JSONObject geometry = feature.getJSONObject("geometry");
-                String type = geometry.getString("type");
-
-                if (type.equals("LineString")) {
-                    roads.add(parseCoordinates(geometry.getJSONArray("coordinates")));
-                } else if (type.equals("Polygon")) {
-                    buildings.add(parsePolygon(geometry.getJSONArray("coordinates")));
-                } else if (type.equals("MultiPolygon")) {
-                    JSONArray polys = geometry.getJSONArray("coordinates");
-                    for (int j = 0; j < polys.length(); j++) {
-                        buildings.add(parsePolygon(polys.getJSONArray(j)));
+            for (i in 0 until features.length()) {
+                val feature = features.getJSONObject(i)
+                val geometry = feature.getJSONObject("geometry")
+                when (geometry.getString("type")) {
+                    "LineString" -> roads.add(
+                        parseCoordinates(geometry.getJSONArray("coordinates"))
+                    )
+                    "Polygon" -> buildings.add(
+                        parsePolygon(geometry.getJSONArray("coordinates"))
+                    )
+                    "MultiPolygon" -> {
+                        val polys = geometry.getJSONArray("coordinates")
+                        for (j in 0 until polys.length()) {
+                            buildings.add(parsePolygon(polys.getJSONArray(j)))
+                        }
                     }
                 }
             }
 
             // Center the map on load
-            offsetX = (minX + maxX) / 2f;
-            offsetY = (minY + maxY) / 2f;
+            offsetX = (minX + maxX) / 2f
+            offsetY = (minY + maxY) / 2f
 
-            System.out.println("Map centered at offset (" + offsetX + ", " + offsetY + "), scale=" + scale);
-
-            System.out.println("Loaded: " + roads.size() + " roads, " + buildings.size() + " buildings");
-
-            System.out.println("Bounds:");
-            System.out.println("X range: " + minX + " → " + maxX);
-            System.out.println("Y range: " + minY + " → " + maxY);
-
-        } catch (Exception e) {
-            e.printStackTrace();
+            println("Map centered at offset ($offsetX, $offsetY), scale=$scale")
+            println("Loaded: ${roads.size} roads, ${buildings.size} buildings")
+            println("Bounds:")
+            println("X range: $minX → $maxX")
+            println("Y range: $minY → $maxY")
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
-    private float[] parseCoordinates(JSONArray coords) {
-        float[] verts = new float[coords.length() * 2];
-        for (int i = 0; i < coords.length(); i++) {
-            JSONArray c = coords.getJSONArray(i);
-            Vector2 p = lonLatToMeters(c.getDouble(0), c.getDouble(1));
-            verts[i * 2] = p.x;
-            verts[i * 2 + 1] = p.y;
+    private fun parseCoordinates(coords: JSONArray): FloatArray {
+        val vertices = FloatArray(coords.length() * 2)
+        for (i in 0 until coords.length()) {
+            val c = coords.getJSONArray(i)
+            val p = lngLatToMeters(c.getDouble(0), c.getDouble(1))
+            vertices[i * 2] = p.x
+            vertices[i * 2 + 1] = p.y
 
-            // track bounds
-            if (p.x < minX) minX = p.x;
-            if (p.x > maxX) maxX = p.x;
-            if (p.y < minY) minY = p.y;
-            if (p.y > maxY) maxY = p.y;
+            if (p.x < minX) minX = p.x
+            if (p.x > maxX) maxX = p.x
+            if (p.y < minY) minY = p.y
+            if (p.y > maxY) maxY = p.y
         }
-        return verts;
+        return vertices
     }
 
-    private float[] parsePolygon(JSONArray polyCoords) {
-        // Polygons in GeoJSON are an array of linear rings
-        return parseCoordinates(polyCoords.getJSONArray(0));
+    private fun parsePolygon(polyCoords: JSONArray): FloatArray =
+        // Polygons in GeoJSON are an array of linear rings; only outer ring used.
+        parseCoordinates(polyCoords.getJSONArray(0))
+
+    fun render() {
+        shapeRenderer.projectionMatrix = camera.combined
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+
+        shapeRenderer.color = Color.RED
+        for (vertices in buildings) drawPolygon(vertices)
+
+        shapeRenderer.color = Color.DARK_GRAY
+        for (vertices in roads) drawLineString(vertices)
+
+        shapeRenderer.end()
     }
 
-    // Web Mercator projection (EPSG:3857)
-    public static Vector2 lonLatToMeters(double lon, double lat) {
-        double x = lon * 20037508.34 / 180.0;
-        double y = Math.log(Math.tan((90.0 + lat) * Math.PI / 360.0)) / (Math.PI / 180.0);
-        y = y * 20037508.34 / 180.0;
-        return new Vector2((float) x, (float) y);
-    }
+    // Note: drawPolygon and drawLineString are identical in the original —
+    // kept separate for parity; collapse in the redesign phase.
+    private fun drawPolygon(vertices: FloatArray) = drawPolyline(vertices)
 
-    public void render() {
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+    private fun drawLineString(vertices: FloatArray) = drawPolyline(vertices)
 
-        // Draw buildings
-        shapeRenderer.setColor(Color.RED);
-        for (float[] verts : buildings) {
-            drawPolygon(verts);
-        }
-
-        // Draw roads
-        shapeRenderer.setColor(Color.DARK_GRAY);
-        for (float[] verts : roads) {
-            drawLineString(verts);
-        }
-
-        shapeRenderer.end();
-    }
-
-    private void drawPolygon(float[] verts) {
-        for (int i = 0; i < verts.length - 2; i += 2) {
-            float x1 = (verts[i] - offsetX) * scale;
-            float y1 = (verts[i + 1] - offsetY) * scale;
-            float x2 = (verts[i + 2] - offsetX) * scale;
-            float y2 = (verts[i + 3] - offsetY) * scale;
-            shapeRenderer.line(x1, y1, x2, y2);
+    private fun drawPolyline(vertices: FloatArray) {
+        var i = 0
+        while (i < vertices.size - 2) {
+            val x1 = (vertices[i] - offsetX) * scale
+            val y1 = (vertices[i + 1] - offsetY) * scale
+            val x2 = (vertices[i + 2] - offsetX) * scale
+            val y2 = (vertices[i + 3] - offsetY) * scale
+            shapeRenderer.line(x1, y1, x2, y2)
+            i += 2
         }
     }
 
-    private void drawLineString(float[] verts) {
-        for (int i = 0; i < verts.length - 2; i += 2) {
-            float x1 = (verts[i] - offsetX) * scale;
-            float y1 = (verts[i + 1] - offsetY) * scale;
-            float x2 = (verts[i + 2] - offsetX) * scale;
-            float y2 = (verts[i + 3] - offsetY) * scale;
-            shapeRenderer.line(x1, y1, x2, y2);
-        }
+    fun dispose() {
+        shapeRenderer.dispose()
     }
 
-    public void dispose() {
-        shapeRenderer.dispose();
+    companion object {
+        // Web Mercator projection (EPSG:3857)
+        fun lngLatToMeters(lng: Double, lat: Double): Vector2 {
+            val x = lng * 20037508.34 / 180.0
+            var y = ln(tan((90.0 + lat) * PI / 360.0)) / (PI / 180.0)
+            y = y * 20037508.34 / 180.0
+            return Vector2(x.toFloat(), y.toFloat())
+        }
     }
 }

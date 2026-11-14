@@ -1,29 +1,13 @@
-package lendloop.core;
+package lendloop.core
 
-import com.badlogic.gdx.ApplicationAdapter;
-import lendloop.maps.raster.RasterMap;
+import com.badlogic.gdx.ApplicationAdapter
+import lendloop.maps.raster.RasterMap
 
-public class LendLoopGame extends ApplicationAdapter {
-    private RasterMap rasterMap;
+class LendLoopGame : ApplicationAdapter() {
+    private var rasterMap: RasterMap = RasterMap()
 
-    @Override
-    public void create() {
-        rasterMap = new RasterMap();
-        rasterMap.create();
-    }
-
-    @Override
-    public void render() {
-        rasterMap.render();
-    }
-
-    @Override
-    public void resize(int width, int height) {
-        rasterMap.resize(width, height);
-    }
-
-    @Override
-    public void dispose() {
-        rasterMap.dispose();
-    }
+    override fun create() { rasterMap.create() }
+    override fun render() { rasterMap.render() }
+    override fun resize(width: Int, height: Int) { rasterMap.resize(width, height) }
+    override fun dispose() { rasterMap.dispose() }
 }

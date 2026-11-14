@@ -19,6 +19,7 @@ import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.ScreenUtils
+import lendloop.core.locker.LockerLayer
 import lendloop.maps.raster.dataclasses.Geolocation
 import lendloop.maps.raster.dataclasses.ZoomXY
 import lendloop.maps.raster.objects.Constants
@@ -35,9 +36,10 @@ class RasterMap : ApplicationAdapter(), GestureDetector.GestureListener, InputPr
     private val centerGeolocation = Geolocation(46.557314, 15.637771)
     private val markerGeolocation = Geolocation(46.559070, 15.638100)
     private val markerPosition = Vector2()  // Reused across frames to avoid per-frame allocation in drawMarkers().
+    private lateinit var lockerLayer: LockerLayer
 
-    val ZOOM_SPEED = 0.05f
-    val MOVE_SPEED = 5f
+    val zoomSpeed = 0.05f
+    val moveSpeed = 5f
     var dragging = false
 
     override fun create() {
@@ -54,7 +56,7 @@ class RasterMap : ApplicationAdapter(), GestureDetector.GestureListener, InputPr
 
         touchPosition = Vector3()
 
-        Gdx.input.inputProcessor = this;
+        Gdx.input.inputProcessor = this
 
         try {
             val centerTile = MapRasterTiles.getTileNumber(
@@ -93,6 +95,9 @@ class RasterMap : ApplicationAdapter(), GestureDetector.GestureListener, InputPr
         tiledMap.layers.add(layer)
 
         tiledMapRenderer = OrthogonalTiledMapRenderer(tiledMap)
+
+        lockerLayer = LockerLayer(shapeRenderer, "http://127.0.0.1:8080")
+        lockerLayer.load()
     }
 
     override fun render() {
@@ -102,6 +107,7 @@ class RasterMap : ApplicationAdapter(), GestureDetector.GestureListener, InputPr
         tiledMapRenderer.setView(camera)
         tiledMapRenderer.render()
         drawMarkers()
+        lockerLayer.render(camera, beginTile)
     }
 
     private fun drawMarkers() {
@@ -127,7 +133,7 @@ class RasterMap : ApplicationAdapter(), GestureDetector.GestureListener, InputPr
 
         val x = Gdx.input.deltaX.toFloat()
         val y = Gdx.input.deltaY.toFloat()
-        camera.translate(-x,y);
+        camera.translate(-x,y)
         return true
     }
 
@@ -136,7 +142,7 @@ class RasterMap : ApplicationAdapter(), GestureDetector.GestureListener, InputPr
     }
 
     override fun scrolled(amountX: Float, amountY: Float): Boolean {
-        camera.zoom += amountY * ZOOM_SPEED
+        camera.zoom += amountY * zoomSpeed
         return true
     }
 
@@ -158,16 +164,24 @@ class RasterMap : ApplicationAdapter(), GestureDetector.GestureListener, InputPr
         pointer: Int,
         button: Int
     ): Boolean {
-        if (button != Input.Buttons.LEFT || pointer > 0) return false;
-        camera.unproject(touchPosition.set(screenX.toFloat(), screenY.toFloat(), 0f))
-        dragging = true;
+        if (button != Input.Buttons.LEFT || pointer > 0) return false
+
+        val world = Vector3(screenX.toFloat(), screenY.toFloat(), 0f)
+        camera.unproject(world)
+        dragging = false
+
+        lockerLayer.onTap(world, beginTile)
         return false
     }
 
     override fun touchUp(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
         if (button != Input.Buttons.LEFT || pointer > 0) return false
-        camera.unproject(touchPosition.set(screenX.toFloat(), screenY.toFloat(), 0f))
+
+        val world = Vector3(screenX.toFloat(), screenY.toFloat(), 0f)
+        camera.unproject(world)
         dragging = false
+
+        lockerLayer.onTap(world, beginTile)
         return true
     }
 
@@ -196,8 +210,8 @@ class RasterMap : ApplicationAdapter(), GestureDetector.GestureListener, InputPr
     }
     override fun panStop(x: Float, y: Float, pointer: Int, button: Int): Boolean = false
     override fun zoom(initialDistance: Float, distance: Float): Boolean {
-        if (initialDistance >= distance) camera.zoom += ZOOM_SPEED
-        else camera.zoom -= ZOOM_SPEED
+        if (initialDistance >= distance) camera.zoom += zoomSpeed
+        else camera.zoom -= zoomSpeed
         return false
     }
     override fun pinch(
@@ -209,12 +223,13 @@ class RasterMap : ApplicationAdapter(), GestureDetector.GestureListener, InputPr
     // Input
     private fun handleInput() {
         with(Gdx.input) {
-            if (isKeyPressed(Input.Keys.Q))  camera.zoom += ZOOM_SPEED
-            if (isKeyPressed(Input.Keys.E)) camera.zoom -= ZOOM_SPEED
-            if (isKeyPressed(Input.Keys.LEFT) || isKeyPressed(Input.Keys.A))  camera.translate(-MOVE_SPEED,  0f, 0f)
-            if (isKeyPressed(Input.Keys.RIGHT) || isKeyPressed(Input.Keys.D)) camera.translate( MOVE_SPEED,  0f, 0f)
-            if (isKeyPressed(Input.Keys.DOWN) || isKeyPressed(Input.Keys.S))  camera.translate( 0f, -MOVE_SPEED, 0f)
-            if (isKeyPressed(Input.Keys.UP) || isKeyPressed(Input.Keys.W))    camera.translate( 0f,  MOVE_SPEED, 0f)
+            if (isKeyPressed(Input.Keys.Q)) camera.zoom += zoomSpeed
+            if (isKeyPressed(Input.Keys.E)) camera.zoom -= zoomSpeed
+            if (isKeyPressed(Input.Keys.LEFT) || isKeyPressed(Input.Keys.A))  camera.translate(-moveSpeed,  0f, 0f)
+            if (isKeyPressed(Input.Keys.RIGHT) || isKeyPressed(Input.Keys.D)) camera.translate( moveSpeed,  0f, 0f)
+            if (isKeyPressed(Input.Keys.DOWN) || isKeyPressed(Input.Keys.S))  camera.translate( 0f, -moveSpeed, 0f)
+            if (isKeyPressed(Input.Keys.UP) || isKeyPressed(Input.Keys.W))    camera.translate( 0f,  moveSpeed, 0f)
+            if (isKeyJustPressed(Input.Keys.F)) lockerLayer.toggleAvailabilityFilter()
         }
 
         camera.zoom = MathUtils.clamp(camera.zoom, 0.5f, 2f)

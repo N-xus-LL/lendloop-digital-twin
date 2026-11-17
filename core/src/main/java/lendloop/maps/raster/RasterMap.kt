@@ -38,8 +38,8 @@ class RasterMap : ApplicationAdapter(), GestureDetector.GestureListener, InputPr
     private val markerPosition = Vector2()  // Reused across frames to avoid per-frame allocation in drawMarkers().
     private lateinit var lockerLayer: LockerLayer
 
-    val zoomSpeed = 0.05f
-    val moveSpeed = 5f
+    val zoomSpeed = 2f
+    val moveSpeed = 500f
     var dragging = false
 
     override fun create() {
@@ -142,7 +142,7 @@ class RasterMap : ApplicationAdapter(), GestureDetector.GestureListener, InputPr
     }
 
     override fun scrolled(amountX: Float, amountY: Float): Boolean {
-        camera.zoom += amountY * zoomSpeed
+        camera.zoom += amountY * zoomSpeed * Gdx.graphics.deltaTime
         return true
     }
 
@@ -168,7 +168,7 @@ class RasterMap : ApplicationAdapter(), GestureDetector.GestureListener, InputPr
 
         val world = Vector3(screenX.toFloat(), screenY.toFloat(), 0f)
         camera.unproject(world)
-        dragging = false
+        dragging = true
 
         lockerLayer.onTap(world, beginTile)
         return false
@@ -210,8 +210,8 @@ class RasterMap : ApplicationAdapter(), GestureDetector.GestureListener, InputPr
     }
     override fun panStop(x: Float, y: Float, pointer: Int, button: Int): Boolean = false
     override fun zoom(initialDistance: Float, distance: Float): Boolean {
-        if (initialDistance >= distance) camera.zoom += zoomSpeed
-        else camera.zoom -= zoomSpeed
+        if (initialDistance >= distance) camera.zoom += zoomSpeed * Gdx.graphics.deltaTime
+        else camera.zoom -= zoomSpeed * Gdx.graphics.deltaTime
         return false
     }
     override fun pinch(
@@ -222,13 +222,14 @@ class RasterMap : ApplicationAdapter(), GestureDetector.GestureListener, InputPr
 
     // Input
     private fun handleInput() {
+        val deltaTime = Gdx.graphics.deltaTime
         with(Gdx.input) {
-            if (isKeyPressed(Input.Keys.Q)) camera.zoom += zoomSpeed
-            if (isKeyPressed(Input.Keys.E)) camera.zoom -= zoomSpeed
-            if (isKeyPressed(Input.Keys.LEFT) || isKeyPressed(Input.Keys.A))  camera.translate(-moveSpeed,  0f, 0f)
-            if (isKeyPressed(Input.Keys.RIGHT) || isKeyPressed(Input.Keys.D)) camera.translate( moveSpeed,  0f, 0f)
-            if (isKeyPressed(Input.Keys.DOWN) || isKeyPressed(Input.Keys.S))  camera.translate( 0f, -moveSpeed, 0f)
-            if (isKeyPressed(Input.Keys.UP) || isKeyPressed(Input.Keys.W))    camera.translate( 0f,  moveSpeed, 0f)
+            if (isKeyPressed(Input.Keys.Q)) camera.zoom += zoomSpeed * deltaTime
+            if (isKeyPressed(Input.Keys.E)) camera.zoom -= zoomSpeed * deltaTime
+            if (isKeyPressed(Input.Keys.LEFT) || isKeyPressed(Input.Keys.A))  camera.translate(-moveSpeed * deltaTime,  0f, 0f)
+            if (isKeyPressed(Input.Keys.RIGHT) || isKeyPressed(Input.Keys.D)) camera.translate( moveSpeed * deltaTime,  0f, 0f)
+            if (isKeyPressed(Input.Keys.DOWN) || isKeyPressed(Input.Keys.S))  camera.translate( 0f, -moveSpeed * deltaTime, 0f)
+            if (isKeyPressed(Input.Keys.UP) || isKeyPressed(Input.Keys.W))    camera.translate( 0f,  moveSpeed * deltaTime, 0f)
             if (isKeyJustPressed(Input.Keys.F)) lockerLayer.toggleAvailabilityFilter()
         }
 

@@ -3,7 +3,7 @@ package lendloop.maps.raster.objects
 import com.badlogic.gdx.Gdx
 
 object Constants {
-    const val NUM_TILES: Int = 3
+    const val NUM_TILES: Int = 5
     const val ZOOM: Int = 15
     const val MAP_WIDTH: Int  = MapRasterTiles.TILE_SIZE * NUM_TILES
     const val MAP_HEIGHT: Int = MapRasterTiles.TILE_SIZE * NUM_TILES

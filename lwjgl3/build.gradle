@@ -14,17 +14,20 @@ buildscript {
   }
 }
 plugins {
-  id "application"
+  id 'application'
 }
 apply plugin: 'io.github.fourlastor.construo'
 apply plugin: 'kotlin'
 
 
+application {
+  mainClass = 'lendloop.lwjgl3.Lwjgl3Launcher'
+}
+
+
 import io.github.fourlastor.construo.Target
 
 sourceSets.main.resources.srcDirs += [ rootProject.file('assets').path ]
-mainClassName = 'lendloop.lwjgl3.Lwjgl3Launcher'
-application.setMainClass(mainClassName)
 eclipse.project.name = appName + '-lwjgl3'
 compileJava.options.release.set(11)
 
@@ -68,9 +71,6 @@ run {
         }
       }
     }
-
-    environment "GEOAPIFY_API_KEY",
-      properties.getProperty("GEOAPIFY_API_KEY", "")
   }
 }
 
@@ -89,7 +89,7 @@ jar {
 // setting the manifest makes the JAR runnable.
 // enabling native access helps avoid a warning when Java 24 or later runs the JAR.
   manifest {
-    attributes 'Main-Class': project.mainClassName, 'Enable-Native-Access': 'ALL-UNNAMED'
+    attributes 'Main-Class': application.mainClass.get(), 'Enable-Native-Access': 'ALL-UNNAMED'
   }
 // this last step may help on some OSes that need extra instruction to make runnable JARs.
   doLast {

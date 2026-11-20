@@ -88,17 +88,14 @@ class CameraController(
     /** Continue a drag. No-op if [beginDrag] was not called. */
     fun dragTo(screenX: Int, screenY: Int) {
         if (!dragging) return
-
         if (dragStartScreen.dst(screenX.toFloat(), screenY.toFloat()) > clickDragThresholdPx) {
             dragMoved = true
         }
 
         camera.unproject(tmp.set(screenX.toFloat(), screenY.toFloat(), 0f))
-        // Translate by the world-space delta between cursor positions.
-        camera.translate(lastWorld.x - tmp.x, lastWorld.y - tmp.y, 0f)
-        lastWorld.set(tmp.x, tmp.y)
-
-        clampPosition()
+        val x = Gdx.input.deltaX.toFloat()
+        val y = Gdx.input.deltaY.toFloat()
+        camera.translate(-x, y)
     }
 
     /**

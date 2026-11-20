@@ -158,7 +158,7 @@ class RasterMap : ApplicationAdapter(), InputProcessor {
     override fun scrolled(amountX: Float, amountY: Float): Boolean {
         if (amountY == 0f) return false
         // One notch up (amountY > 0) should zoom in, i.e. decrease camera.zoom.
-        val factor = if (amountY > 0f) 1f / 1.2f else 1.2f
+        val factor = if (amountY > 0f) 1.2f else 1f / 1.2f
         cameraController.zoomAt(Gdx.input.x, Gdx.input.y, factor)
         return true
     }
